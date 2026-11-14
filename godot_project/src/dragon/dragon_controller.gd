@@ -34,6 +34,8 @@ var _right_wing: Node3D
 func _ready() -> void:
 	if stats == null:
 		stats = DragonStats.new()
+	flight_speed *= stats.flight_speed_multiplier
+	boost_speed *= stats.flight_speed_multiplier
 	current_hp = stats.max_hp
 	current_stamina = stats.max_stamina
 	_build_placeholder_dragon()
@@ -149,7 +151,10 @@ func _update_following(delta: float) -> void:
 func _update_staying(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0.0, 15.0 * delta)
 	velocity.z = move_toward(velocity.z, 0.0, 15.0 * delta)
-	current_stamina = minf(stats.max_stamina, current_stamina + 10.0 * delta)
+	current_stamina = minf(
+		stats.max_stamina,
+		current_stamina + 10.0 * stats.stamina_regen_multiplier * delta
+	)
 	_apply_ground_gravity(delta)
 	move_and_slide()
 
@@ -164,7 +169,10 @@ func _update_companion_flight(delta: float) -> void:
 		target_position.y += 2.2
 		var direction: Vector3 = (target_position - global_position).normalized()
 		velocity = direction * minf(flight_speed, offset.length())
-		current_stamina = maxf(0.0, current_stamina - 6.0 * delta)
+		current_stamina = maxf(
+			0.0,
+			current_stamina - 6.0 * stats.flight_stamina_cost_multiplier * delta
+		)
 		_face_direction(Vector3(direction.x, 0.0, direction.z), delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, 10.0 * delta)
@@ -188,11 +196,20 @@ func _update_mounted_movement(delta: float) -> void:
 	var speed: float = stats.movement_speed if not is_flying else flight_speed
 	if _rider_boosting and current_stamina > 0.0:
 		speed = boost_speed
-		current_stamina = maxf(0.0, current_stamina - 18.0 * delta)
+		current_stamina = maxf(
+			0.0,
+			current_stamina - 18.0 * stats.flight_stamina_cost_multiplier * delta
+		)
 	elif is_flying and _rider_ascending and current_stamina > 0.0:
-		current_stamina = maxf(0.0, current_stamina - 12.0 * delta)
+		current_stamina = maxf(
+			0.0,
+			current_stamina - 12.0 * stats.flight_stamina_cost_multiplier * delta
+		)
 	else:
-		current_stamina = minf(stats.max_stamina, current_stamina + 8.0 * delta)
+		current_stamina = minf(
+			stats.max_stamina,
+			current_stamina + 8.0 * stats.stamina_regen_multiplier * delta
+		)
 
 	velocity.x = move_toward(velocity.x, horizontal_direction.x * speed, 8.0 * delta)
 	velocity.z = move_toward(velocity.z, horizontal_direction.z * speed, 8.0 * delta)
@@ -244,7 +261,7 @@ func _build_placeholder_dragon() -> void:
 	elif stats.element == "Vento":
 		hide_color = Color(0.32, 0.55, 0.52)
 		wing_color = Color(0.2, 0.39, 0.42)
-	elif stats.element == "Água/Gelo":
+	elif stats.element == "Água/Gelo" or stats.element == "Água / Gelo":
 		hide_color = Color(0.28, 0.48, 0.72)
 		wing_color = Color(0.17, 0.33, 0.57)
 
