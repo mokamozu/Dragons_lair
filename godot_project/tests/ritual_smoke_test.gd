@@ -178,6 +178,33 @@ func _test_flight_physics() -> void:
 	)
 
 	flight.reset()
+	velocity = Vector3(0.0, 2.5, -14.0)
+	for _step: int in range(60):
+		var level_result: Dictionary = flight.update_velocity(
+			velocity, Vector3.FORWARD, 0.0, 0.0, false, false, false,
+			false, 1.0 / 60.0, stats, "Fogo", 14.0, 100.0
+		)
+		velocity = level_result["velocity"]
+	_check(
+		absf(velocity.y) < 0.1,
+		"Voo nivelado deve dissipar a velocidade vertical residual."
+	)
+
+	var climb_control_result: Dictionary = flight.update_velocity(
+		Vector3(0.0, 0.0, -14.0), Vector3.FORWARD, 0.35, 0.0, false, false, false,
+		false, 1.0 / 60.0, stats, "Fogo", 14.0, 100.0
+	)
+	var dive_control_result: Dictionary = flight.update_velocity(
+		Vector3(0.0, 0.0, -14.0), Vector3.FORWARD, -0.35, 0.0, false, false, false,
+		false, 1.0 / 60.0, stats, "Fogo", 14.0, 100.0
+	)
+	_check(
+		float(climb_control_result["velocity"].y) > 0.0
+			and float(dive_control_result["velocity"].y) < 0.0,
+		"A inclinação de voo deve comandar a subida e o mergulho de forma previsível."
+	)
+
+	flight.reset()
 	var stall_result: Dictionary = flight.update_velocity(
 		Vector3(0.0, 0.0, -2.0), Vector3.FORWARD, 0.52, 0.0, false, false, false,
 		false, 0.25, stats, "Fogo", 14.0, 100.0
@@ -264,10 +291,10 @@ func _test_flight_camera_effects() -> void:
 	var cruise: Dictionary = FlightCameraEffects.get_targets(14.0 / 38.0, false)
 	var terminal: Dictionary = FlightCameraEffects.get_targets(1.0, false)
 	var braking: Dictionary = FlightCameraEffects.get_targets(1.0, true)
-	_check(is_equal_approx(float(cruise["fov"]), 70.0 + 26.0 * 14.0 / 38.0), "O FOV deve responder suavemente à velocidade.")
-	_check(is_equal_approx(float(terminal["fov"]), 96.0), "A velocidade terminal deve ampliar o FOV para 96 graus.")
-	_check(is_equal_approx(float(terminal["distance"]), 7.5), "A câmera deve afastar-se em velocidade terminal.")
-	_check(is_equal_approx(float(braking["distance"]), 4.2), "O freio aéreo deve aproximar a câmera para a manobra.")
+	_check(is_equal_approx(float(cruise["fov"]), 70.0 + 16.0 * 14.0 / 38.0), "O FOV deve responder suavemente à velocidade.")
+	_check(is_equal_approx(float(terminal["fov"]), 86.0), "O FOV máximo de voo deve permanecer confortável.")
+	_check(is_equal_approx(float(terminal["distance"]), 6.25), "A câmera deve afastar-se moderadamente em velocidade terminal.")
+	_check(is_equal_approx(float(braking["distance"]), 4.5), "O freio aéreo deve aproximar a câmera para a manobra.")
 
 
 func _test_mage_interface_flow() -> void:
@@ -457,14 +484,28 @@ func _test_farm_scene_starts() -> void:
 		absf(wrapf(camera.rotation.y + spring_arm.rotation.y, -PI, PI)) < 0.001,
 		"A câmera montada deve olhar para a frente mesmo com o braço atrás do dragão."
 	)
+	var camera_yaw_before_turn: float = atan2(
+		-camera_pivot.global_basis.z.x,
+		-camera_pivot.global_basis.z.z
+	)
+	dragon.set("rider", player)
+	dragon.call("_face_flight_direction", Vector3.RIGHT, 0.1, 1.0)
+	var camera_yaw_after_turn: float = atan2(
+		-camera_pivot.global_basis.z.x,
+		-camera_pivot.global_basis.z.z
+	)
+	_check(
+		absf(wrapf(camera_yaw_after_turn - camera_yaw_before_turn, -PI, PI)) < 0.001,
+		"A câmera deve manter o rumo de mira enquanto o dragão acompanha a curva."
+	)
 	camera_pivot.call("set_flight_feedback", 42.0, 42.0, true, false)
 	camera_pivot.call("_process", 1.0)
-	_check(is_equal_approx(camera.fov, 96.0), "A câmera montada deve expandir o FOV em velocidade terminal.")
-	_check(is_equal_approx(spring_arm.spring_length, 7.5), "O SpringArm deve afastar-se em velocidade terminal.")
+	_check(is_equal_approx(camera.fov, 86.0), "A câmera montada deve expandir moderadamente o FOV em velocidade terminal.")
+	_check(is_equal_approx(spring_arm.spring_length, 6.25), "O SpringArm deve afastar-se moderadamente em velocidade terminal.")
 	camera_pivot.call("set_flight_feedback", 42.0, 42.0, true, true)
 	camera_pivot.call("_process", 1.0)
 	_check(is_equal_approx(camera.fov, 74.0), "O freio deve suavizar o FOV para a manobra.")
-	_check(is_equal_approx(spring_arm.spring_length, 4.2), "O freio deve aproximar o SpringArm.")
+	_check(is_equal_approx(spring_arm.spring_length, 4.5), "O freio deve aproximar o SpringArm.")
 	camera_pivot.call("set_flight_feedback", 0.0, 42.0, false, false)
 	camera_pivot.call("_process", 1.0)
 	dragon.call(

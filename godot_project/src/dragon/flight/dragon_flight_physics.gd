@@ -40,7 +40,7 @@ func update_velocity(
 	var terminal: float = 38.0 * stats.flight_speed_multiplier
 	if element == "Vento":
 		terminal = minf(terminal, 42.0)
-	var dive_acceleration: float = 16.0 if element == "Fogo" else 12.0
+	var dive_acceleration: float = 10.0 if element == "Fogo" else 8.0
 	var stall_speed: float = 4.0 if element == "Terra" else STALL_SPEED
 	var flight_velocity: Vector3 = current_velocity
 	var stamina_cost: float = 0.0
@@ -86,7 +86,7 @@ func update_velocity(
 			stamina_cost += (1.2 + maxf(thrust_pitch, 0.0) * 2.0) * throttle * delta
 
 		if boosting and available_stamina > 0.0:
-			flight_velocity += horizontal_heading * 11.0 * delta
+			flight_velocity += horizontal_heading * 7.0 * delta
 			stamina_cost += 6.0 * delta
 
 		speed = flight_velocity.length()
@@ -109,8 +109,16 @@ func update_velocity(
 				lift_multiplier = 1.28
 			elif element == "Água/Gelo" and is_near_ground:
 				lift_multiplier = 1.55
-			var lift: float = GRAVITY * pow(speed / cruise, 2.0) * lift_multiplier
-			flight_velocity.y += (minf(lift, 12.0) - GRAVITY) * delta
+			var target_vertical_speed: float = (
+				sin(flight_pitch) * minf(speed, cruise) * 0.5 * lift_multiplier
+			)
+			if element == "Água/Gelo" and is_near_ground:
+				target_vertical_speed += maxf(speed - cruise, 0.0) * 0.2
+			flight_velocity.y = move_toward(
+				flight_velocity.y,
+				target_vertical_speed,
+				GRAVITY * 1.5 * delta
+			)
 
 			if flight_pitch > 0.12 and speed >= stall_speed and kinetic_charge > 0.0:
 				var converted_energy: float = minf(kinetic_charge, flight_pitch * 10.0 * delta)

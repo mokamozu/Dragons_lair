@@ -16,7 +16,7 @@ Projeto inicial jogável para Godot 4.3 ou superior. A renderização usa **Comp
 | Shift | Correr a pé ou impulsionar durante o voo |
 | Espaço | Pular a pé; decolar e executar impulso de batida no ar |
 | C | Inclinar para baixo durante o voo |
-| Mouse | Girar a câmera e controlar a inclinação do voo montado |
+| Mouse | Girar a câmera; olhar para cima/baixo controla a subida e o mergulho montado |
 | E | Interagir com recursos, porta e canteiros |
 | F | Montar ou desmontar (é necessário pousar para desmontar) |
 | G | Alternar entre seguir e ficar parado |

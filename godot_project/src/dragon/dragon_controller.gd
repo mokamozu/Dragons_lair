@@ -74,7 +74,7 @@ func _process(delta: float) -> void:
 		if camera_pivot != null:
 			camera_pivot.call(
 				"set_flight_feedback",
-				_flight_speed,
+				Vector2(velocity.x, velocity.z).length(),
 				_flight_terminal_speed,
 				_flight_active,
 				_rider_air_braking
@@ -340,18 +340,40 @@ func _update_flight_attitude(delta: float) -> void:
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
 	var travel_pitch: float = atan2(velocity.y, maxf(horizontal_speed, 0.1))
 	_visual_target_pitch = clampf(travel_pitch, -0.65, 0.65)
-	var heading: Vector3 = -global_basis.z
 	var velocity_heading: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
 	if velocity_heading.length_squared() < 0.01:
 		_visual_target_roll = 0.0
 		return
 	velocity_heading = velocity_heading.normalized()
-	var heading_angle: float = atan2(-heading.x, -heading.z)
 	var travel_angle: float = atan2(-velocity_heading.x, -velocity_heading.z)
-	var turn_angle: float = wrapf(travel_angle - heading_angle, -PI, PI)
+	var requested_heading: Vector3 = _rider_direction
+	requested_heading.y = 0.0
+	if requested_heading.length_squared() < 0.01:
+		requested_heading = velocity_heading
+	else:
+		requested_heading = requested_heading.normalized()
+	var requested_angle: float = atan2(-requested_heading.x, -requested_heading.z)
+	var turn_angle: float = wrapf(requested_angle - travel_angle, -PI, PI)
 	var speed_ratio: float = clampf(_flight_speed / maxf(_flight_terminal_speed, 1.0), 0.0, 1.0)
-	_visual_target_roll = clampf(-turn_angle * (0.65 + speed_ratio * 0.6), -PI / 3.0, PI / 3.0)
-	_face_direction(velocity_heading, delta)
+	_visual_target_roll = clampf(
+		-turn_angle * (0.45 + speed_ratio * 0.25),
+		-deg_to_rad(32.0),
+		deg_to_rad(32.0)
+	)
+	_face_flight_direction(velocity_heading, delta, speed_ratio)
+
+
+func _face_flight_direction(direction: Vector3, delta: float, speed_ratio: float) -> void:
+	var target_yaw: float = atan2(-direction.x, -direction.z)
+	var heading_delta: float = wrapf(target_yaw - rotation.y, -PI, PI)
+	var turn_rate: float = deg_to_rad(90.0) * clampf(stats.agility / 8.0, 0.25, 2.0)
+	turn_rate *= 0.25 + speed_ratio * 0.75
+	var yaw_step: float = clampf(heading_delta, -turn_rate * delta, turn_rate * delta)
+	rotation.y += yaw_step
+	if rider != null:
+		var camera_pivot: Node3D = rider.get_node_or_null("CameraPivot")
+		if camera_pivot != null:
+			camera_pivot.rotation.y -= yaw_step
 
 
 func _is_near_ground() -> bool:

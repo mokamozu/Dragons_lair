@@ -7,9 +7,9 @@ static func get_targets(speed_ratio: float, air_braking: bool) -> Dictionary:
 	if air_braking:
 		return {
 			"fov": lerpf(70.0, 74.0, normalized_speed),
-			"distance": lerpf(5.0, 4.2, normalized_speed),
+			"distance": lerpf(5.0, 4.5, normalized_speed),
 		}
 	return {
-		"fov": lerpf(70.0, 96.0, normalized_speed),
-		"distance": lerpf(5.0, 7.5, normalized_speed),
+		"fov": lerpf(70.0, 86.0, normalized_speed),
+		"distance": lerpf(5.0, 6.25, normalized_speed),
 	}

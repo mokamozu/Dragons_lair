@@ -1,10 +1,14 @@
 extends Node3D
 
 const TRAIL_OFFSET: float = 1.42
+const WIND_VOLUME_MIN_DB: float = -60.0
+const WIND_VOLUME_MAX_DB: float = -24.0
+const WIND_VOLUME_FADE_SPEED: float = 36.0
 
 var _left_trail: GPUParticles3D
 var _right_trail: GPUParticles3D
 var _wind_audio: AudioStreamPlayer
+var _wind_target_volume_db: float = WIND_VOLUME_MIN_DB
 
 
 func _ready() -> void:
@@ -13,8 +17,22 @@ func _ready() -> void:
 	_wind_audio = AudioStreamPlayer.new()
 	_wind_audio.name = "WindAudio"
 	_wind_audio.stream = _create_wind_stream()
-	_wind_audio.volume_db = -60.0
+	_wind_audio.volume_db = WIND_VOLUME_MIN_DB
 	add_child(_wind_audio)
+
+
+func _process(delta: float) -> void:
+	_wind_audio.volume_db = move_toward(
+		_wind_audio.volume_db,
+		_wind_target_volume_db,
+		WIND_VOLUME_FADE_SPEED * delta
+	)
+	if (
+		_wind_audio.playing
+		and _wind_target_volume_db == WIND_VOLUME_MIN_DB
+		and _wind_audio.volume_db <= WIND_VOLUME_MIN_DB
+	):
+		_wind_audio.stop()
 
 
 func set_flight_feedback(speed_ratio: float, is_flying: bool, air_braking: bool) -> void:
@@ -25,10 +43,12 @@ func set_flight_feedback(speed_ratio: float, is_flying: bool, air_braking: bool)
 	var should_play_wind: bool = is_flying and intensity > 0.05
 	if should_play_wind and not _wind_audio.playing:
 		_wind_audio.play()
-	elif not should_play_wind and _wind_audio.playing:
-		_wind_audio.stop()
-	_wind_audio.volume_db = lerpf(-60.0, -9.0, intensity) if should_play_wind else -60.0
-	_wind_audio.pitch_scale = lerpf(0.7, 1.7, intensity)
+	_wind_target_volume_db = (
+		lerpf(WIND_VOLUME_MIN_DB, WIND_VOLUME_MAX_DB, intensity)
+		if should_play_wind
+		else WIND_VOLUME_MIN_DB
+	)
+	_wind_audio.pitch_scale = lerpf(0.85, 1.15, intensity)
 
 
 func _exit_tree() -> void:
