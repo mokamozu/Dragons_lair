@@ -3,7 +3,7 @@
 ## 🎯 Objetivo
 Implementar a arquitetura de dados e o sistema de resolução/geração procedural e determinística das **raças de dragão** no Godot 4, cruzando o resultado do **Circuito de Sobrevivência (4 Tipos Elementais)** com o **Teste do Mago (4 Grupos MBTI)** e desbloqueando **5 variações de espécies** dentro de cada combinação (totalizando **80 espécies catalogáveis**).
 
-A nova arquitetura substitui o dicionário estático `RACE_DATA` do prólogo por uma estrutura modular extensível orientada a `Resource` (`DragonSpeciesData` e `DragonInstanceData`), desacoplando metadados visuais/mecânicos da instância individual do jogador.
+A nova arquitetura substitui o dicionário estático `RACE_DATA` do prólogo por uma estrutura modular extensível orientada a `Resource` (`DragonSpeciesData` e `DragonInstanceData`), desacoplando metadados visuais/mecânicos da instância individual do jogador e garantindo compatibilidade contínua com `DragonData` e o pipeline de salvamento existente.
 
 ---
 
@@ -11,105 +11,144 @@ A nova arquitetura substitui o dicionário estático `RACE_DATA` do prólogo por
 
 ```mermaid
 graph TD
-    A[Circuito de Sobrevivência<br>4 Tipos Elementais] --> C[Cruzamento / Resolução Taxonômica]
-    B[Teste de Personalidade MBTI<br>4 Grupos de Temperamento] --> C
-    C --> D[16 Arquétipos Base: Tipo x Classe]
-    D --> E[Subespécies: 5 Variações por Arquétipo<br>Pura / Blindada / Alada / Rúnica / Ancestral]
-    E --> F[80 Espécies Únicas Catalogáveis]
+    subgraph Entrada_Prologo ["Entradas do Prólogo"]
+        Route["Circuito de Sobrevivência<br>Rota (0 a 3)"] --> Element["Eixo 1: 4 Tipos Elementais<br>(Serpe, Draco, Wyvern, Leviatã)"]
+        MBTI["Teste do Mago<br>MBTI Complementar (16 tipos)"] --> Group["Eixo 2: 4 Classes MBTI<br>(Soberana NT, Etérea NF, Bastião SJ, Predadora SP)"]
+        Perf["Desempenho no Circuito + Identidade -A/-T"] --> Var["Eixo 3: 5 Variações Morfológicas<br>(Pura, Blindada, Alada, Rúnica, Ancestral)"]
+    end
+
+    Element --> Factory["DragonFactory / Resolver"]
+    Group --> Factory
+    Var --> Factory
+
+    Factory --> Registry["DragonTaxonomyRegistry<br>(Lookup Indexado dos 80 .tres)"]
+    Registry --> SpeciesData["DragonSpeciesData (Resource Estático)"]
+    SpeciesData --> InstanceData["DragonInstanceData (Instância Viva do Jogador)"]
+    InstanceData --> RuntimeStats["DragonStats (Cálculo em Combate e Voo)"]
 ```
 
-### Eixo 1: Os 4 Tipos Elementais (Definidos pela Rota no Parkour)
-1. **Serpe (Vento / Raio)** – *Rota das Correntes*
-   * **Foco:** Velocidade Aérea, Agilidade de Voo e Estamina.
-2. **Draco (Fogo)** – *Rota das Brasas*
-   * **Foco:** Dano Elemental, Ataque Direto e Crítico.
-3. **Wyvern (Terra)** – *Rota das Raízes*
-   * **Foco:** Vitalidade, Defesa Física e Capacidade de Carga.
-4. **Leviatã (Água / Gelo)** – *Rota das Marés*
-   * **Foco:** Regeneração, Esquiva Aquática/Terrestre e Controle.
+### Eixo 1: Os 4 Tipos Elementais (Definidos pela Rota do Parkour)
+Determinados pela canaleta/rota percorrida no `SurvivalCourse`:
+1. **Serpe (Vento / Raio)** – *Caminho das Correntes (Rota 0)*
+   * **Bases:** +40 Estamina, +15% Velocidade Aérea, -20% Custo de Voo.
+2. **Draco (Fogo)** – *Caminho das Brasas (Rota 1)*
+   * **Bases:** +15 Poder Elemental, +10% Dano Crítico, Imunidade/Resistência a Calor.
+3. **Wyvern (Terra)** – *Caminho das Raízes (Rota 2)*
+   * **Bases:** +50 Vitalidade Máxima, +40 Capacidade de Carga, Bônus de Armadura Física.
+4. **Leviatã (Água / Gelo)** – *Caminho das Marés (Rota 3)*
+   * **Bases:** +25% Regeneração de Fôlego, +20% Agilidade de Curva, +50% Velocidade de Nado.
 
-### Eixo 2: As 4 Classes de Temperamento (Definidas pelo Grupo MBTI do Dragão)
-Cada um dos 4 Tipos Elementais se subdivide em **4 Classes de Temperamento**:
+### Eixo 2: As 4 Classes de Temperamento (Definidas pelo Grupo MBTI)
+O MBTI complementar do dragão gerado no `MagePersonalityTest` é agrupado por seu núcleo funcional:
 1. **Classe Soberana — Analistas (`NT`: INTJ, INTP, ENTJ, ENTP)**
-   * *Perfil:* Estratégicos, focados em magia e alcance, alto intelecto tático e poder elemental refinado.
+   * *Foco Mecânico:* Mágico / Tático / Artilharia.
+   * *Bônus:* +15% Poder Elemental, +20% Alcance de Disparo de Sopro, redução do consumo de mana/fôlego elemental.
 2. **Classe Etérea — Diplomatas (`NF`: INFJ, INFP, ENFJ, ENFP)**
-   * *Perfil:* Empáticos, suporte, vínculo afetivo acelerado, auras de cura e sinergia de combate.
+   * *Foco Mecânico:* Suporte / Simbiose / Cura.
+   * *Bônus:* +30% Ganho de Afeição/Vínculo, Aura de Regeneração passiva para montaria e cavaleiro, bônus de recuperação de fadiga.
 3. **Classe Bastião — Sentinelas (`SJ`: ISTJ, ISFJ, ESTJ, ESFJ)**
-   * *Perfil:* Disciplinados, leais, tanques naturais, bônus defensivos em área e produtividade (transporte/trabalho).
+   * *Foco Mecânico:* Tanque / Guarda / Produtividade.
+   * *Bônus:* +25% Resistência a Dano Físico, +35% Capacidade de Carga de recursos da fazenda, imunidade a recuo (*stagger*).
 4. **Classe Predadora — Exploradores (`SP`: ISTP, ISFP, ESTP, ESFP)**
-   * *Perfil:* Instintivos, reflexos rápidos, foco em dano físico, esquiva, combate corpo a corpo e aceleração súbita.
+   * *Foco Mecânico:* Combate Corpo a Corpo / Velocidade / Esquiva.
+   * *Bônus:* +15% Velocidade Terrestre/Aceleração, +15% Chance de Crítico Físico, manobras evasivas imediatas.
 
-### Eixo 3: As 5 Variações por Arquétipo (Total: 80 Espécies Catalogáveis)
-Para cada uma das 16 combinações (Tipo × Classe), existem **5 variações morfológicas/genéticas** distintas:
-* **Variação 1 (Comum / Pura):** Linhagem equilibrada do santuário ancestral.
-* **Variação 2 (Subterrânea / Blindada):** Placas ósseas espessas, massa corporal elevada, bônus de Armadura/Defesa.
-* **Variação 3 (Alada / Esguia):** Envergadura ampliada, membranas aerodinâmicas, velocidade e planeio otimizados.
-* **Variação 4 (Rúnica / Mística):** Cristais ou glifos bioluminescentes, afinidade com status elementais e custo de mana/fôlego reduzido.
-* **Variação 5 (Ancestral / Rara):** Coroa de chifres exclusiva, cauda modificada, passiva assinatura e modificadores estatísticos de elite.
+### Eixo 3: As 5 Variações Morfológicas por Combinação
+Para cada uma das 16 combinações (4 Elementos × 4 Classes), existem 5 subespécies com identidades visuais e especializações distintas:
+
+| Variação | Nomenclatura / Sufixo | Perfil Visual | Modificador de Atributos | Regra de Desbloqueio no Ritual |
+| :--- | :--- | :--- | :--- | :--- |
+| **V1: Pura** | *Comum / Primordial* | Proporções clássicas e equilibradas | Atributos balanceados da linhagem | Conclusão regular do percurso sem extremos |
+| **V2: Blindada** | *Couraçada / Férrea* | Placas ósseas proeminentes, silhueta pesada | +25% Defesa / Armadura, -5% Velocidade | Jogador recebeu dano na rota OU dragão `-T` com ênfase defensiva |
+| **V3: Alada** | *Esguia / Céfiro* | Envergadura alongada, membranas finas | +15% Velocidade de Voo, +10% Agilidade | Tempo de conclusão abaixo de 50% do limite e dragão `-A` |
+| **V4: Rúnica** | *Mística / Cristalina* | Glifos bioluminescentes nas asas/escamas | +15% Poder Mágico, +15% Eficiência Elemental | Acerto em todos os alvos opcionais / cristais do percurso |
+| **V5: Ancestral** | *Titânica / Alfa* | Coroa de chifres exclusiva, cauda modificada, brilho dourado/fumaça | +20% HP, +10% Dano Geral, Passiva Rara | Percurso sem danos + alvos acertados + sinergia alta no teste |
+
+> **Total da Matriz:** 4 Tipos Elementais × 4 Classes de Temperamento × 5 Variações = **80 Espécies Únicas Catalogáveis**.
 
 ---
 
-## 🛠️ Especificação Técnica (Godot 4)
+## 📐 Regras de Nomenclatura Sistemática (80 Espécies)
 
-### 1. Estrutura de Arquivos e Pastas
+A nomenclatura é gerada através da fórmula determinística:
+$$\text{Nome da Espécie} = \text{[Raça Base]} + \text{" "} + \text{[Epíteto de Classe]} + \text{" "} + \text{[Qualificador de Variação]}$$
+
+* **Exemplos práticos:**
+  * Vento + NT + Alada $\rightarrow$ *Serpe Soberana Céfiros*
+  * Fogo + SP + Blindada $\rightarrow$ *Draco Predador Couraçado*
+  * Terra + SJ + Ancestral $\rightarrow$ *Wyvern Bastião Titânico*
+  * Água + NF + Rúnica $\rightarrow$ *Leviatã Etéreo Cristalino*
+
+---
+
+## 🛠️ Especificação Técnica da Arquitetura Godot 4
+
+### 1. Estrutura de Pastas e Recursos
 ```text
 godot_project/
 ├── data/
 │   └── dragons/
-│       ├── vento/              # 20 .tres (4 classes × 5 variações)
-│       ├── fogo/               # 20 .tres
-│       ├── terra/              # 20 .tres
-│       └── agua/               # 20 .tres
+│       ├── vento/              # 20 arquivos .tres (4 classes × 5 variações)
+│       ├── fogo/               # 20 arquivos .tres
+│       ├── terra/              # 20 arquivos .tres
+│       └── agua/               # 20 arquivos .tres
 └── src/
     ├── resources/
-    │   ├── dragon_species_data.gd    # Resource estático da espécie (base stats, modelo, ícone, perks)
-    │   └── dragon_instance_data.gd   # Resource da instância viva (MBTI, apelido, XP, vínculo, IVs)
+    │   ├── dragon_species_data.gd    # Resource estático da espécie (base stats, assets, passiva)
+    │   ├── dragon_instance_data.gd   # Resource da instância viva (vínculo, status atuais, XP, IVs)
+    │   └── dragon_data.gd            # Adapter mantido para compatibilidade do prólogo
     └── systems/
-        ├── dragon_taxonomy_registry.gd # Singleton/Registry para indexação dos 80 .tres e lookup rápido
-        └── dragon_factory.gd           # Geração determinística (Elemento + MBTI + Identidade/Seed -> Espécie)
+        ├── dragon_taxonomy_registry.gd # Singleton/Registry com dicionário indexado e pré-carregamento
+        ├── dragon_factory.gd           # Resolvedor determinístico (Rota + MBTI + Desempenho -> Espécie)
+        └── tools/
+            └── dragon_species_generator.gd # Tool script (@tool) para gerar/atualizar os 80 .tres em lote
 ```
 
-### 2. Definição dos Resources
+### 2. Contratos de Código
 
 #### `DragonSpeciesData` (`res://src/resources/dragon_species_data.gd`)
 ```gdscript
 class_name DragonSpeciesData
 extends Resource
 
-enum ElementalType { VENTO, FOGO, TERRA, AGUA }
-enum TemperamentClass { SOBERANA_NT, ETEREA_NF, BASTIAO_SJ, PREDADORA_SP }
-enum MorphologyVariation { PURA, BLINDADA, ALADA, RUNICA, ANCESTRAL }
+enum ElementalType { VENTO = 0, FOGO = 1, TERRA = 2, AGUA = 3 }
+enum TemperamentClass { SOBERANA_NT = 0, ETEREA_NF = 1, BASTIAO_SJ = 2, PREDADORA_SP = 3 }
+enum MorphologyVariation { PURA = 0, BLINDADA = 1, ALADA = 2, RUNICA = 3, ANCESTRAL = 4 }
 
 @export_group("Taxonomia")
-@export var id: String = ""                           # Ex: "vento_nt_ancestral"
-@export var species_name: String = ""                 # Ex: "Serpe Soberana Primordial"
+@export var id: String = ""                           # Ex: "vento_soberana_alada"
+@export var species_name: String = ""                 # Ex: "Serpe Soberana Céfiros"
 @export var elemental_type: ElementalType = ElementalType.VENTO
 @export var temperament_class: TemperamentClass = TemperamentClass.SOBERANA_NT
 @export var variation: MorphologyVariation = MorphologyVariation.PURA
 @export_multiline var lore_description: String = ""
 
-@export_group("Visual e Áudio")
-@export var model_scene: PackedScene                  # Mesh/Rig específico ou variações de partes
-@export var base_texture: Texture2D
+@export_group("Representação Visual e Áudio")
+@export var model_scene: PackedScene
+@export var texture_albedo: Texture2D
+@export var texture_emission: Texture2D
 @export var icon: Texture2D
-@export var roar_sound: AudioStream
+@export var roar_stream: AudioStream
 
-@export_group("Atributos Base")
+@export_group("Modificadores e Atributos Base")
 @export var base_max_hp: float = 120.0
 @export var base_max_stamina: float = 100.0
 @export var base_elemental_power: float = 15.0
 @export var base_physical_strength: float = 10.0
 @export var base_carry_capacity: float = 40.0
-@export var base_flight_speed: float = 1.0
-@export var base_turn_agility: float = 1.0
+@export var base_flight_speed_mult: float = 1.0
+@export var base_turn_agility_mult: float = 1.0
+@export var base_flight_cost_mult: float = 1.0
 @export var base_critical_chance: float = 0.05
-@export var base_stamina_regen: float = 1.0
-
-@export_group("Perks & Passivas")
-@export var passive_id: String = ""
-@export var passive_description: String = ""
+@export var base_critical_damage_mult: float = 1.5
+@export var base_stamina_regen_mult: float = 1.0
+@export var base_swim_speed_mult: float = 1.0
 @export var heat_resistance: bool = false
-@export var swim_multiplier: float = 1.0
+
+@export_group("Habilidade Passiva Assinatura")
+@export var passive_id: String = ""
+@export var passive_name: String = ""
+@export_multiline var passive_description: String = ""
 ```
 
 #### `DragonInstanceData` (`res://src/resources/dragon_instance_data.gd`)
@@ -117,67 +156,97 @@ enum MorphologyVariation { PURA, BLINDADA, ALADA, RUNICA, ANCESTRAL }
 class_name DragonInstanceData
 extends Resource
 
+const DRAGON_STATS_SCRIPT: Script = preload("res://src/systems/dragon_stats.gd")
+
 @export var nickname: String = ""
 @export var species_data: DragonSpeciesData
 @export var player_mbti: String = "ENFP-A"
-@export var dragon_mbti: String = "INTJ-A"
-@export var identity_suffix: String = "A"             # 'A' (Assertivo) ou 'T' (Turbulento)
+@export var dragon_mbti: String = "INTJ-T"
+@export var behavioral_trait: String = ""
 
-# Vínculo e Progressão
-@export var current_hp: float = 100.0
+@export_group("Estado de Jogo")
+@export var current_hp: float = 120.0
 @export var level: int = 1
 @export var current_xp: int = 0
 @export var bond_affection: float = 10.0
-@export var exhaustion_state: bool = false
+@export var exhausted_first_day: bool = false
 
-# Individual Values / Mutações
-@export var scale_modifier: float = 1.0
+@export_group("Mutações Individuais (IVs)")
+@export var scale_multiplier: float = 1.0
 @export var pigment_tint: Color = Color.WHITE
 
 func build_runtime_stats() -> DragonStats:
-    # Compõe os status do DragonSpeciesData com bônus de temperamento e afinidade
-    pass
+    assert(species_data != null, "DragonSpeciesData não pode ser nulo.")
+    var stats: DragonStats = DRAGON_STATS_SCRIPT.new()
+    stats.dragon_name = nickname if not nickname.is_empty() else species_data.species_name
+    stats.element = _get_element_name(species_data.elemental_type)
+    stats.max_hp = species_data.base_max_hp
+    stats.max_stamina = species_data.base_max_stamina
+    stats.elemental_power = species_data.base_elemental_power
+    stats.physical_strength = species_data.base_physical_strength
+    stats.carry_capacity = species_data.base_carry_capacity
+    stats.agility = 8.0 * species_data.base_turn_agility_mult
+    stats.critical_chance = species_data.base_critical_chance
+    stats.critical_damage_multiplier = species_data.base_critical_damage_mult
+    stats.stamina_regen_multiplier = species_data.base_stamina_regen_mult
+    stats.flight_speed_multiplier = species_data.base_flight_speed_mult
+    stats.flight_stamina_cost_multiplier = species_data.base_flight_cost_mult
+    stats.swim_speed_multiplier = species_data.base_swim_speed_mult
+    stats.heat_resistance = species_data.heat_resistance
+    stats.bond_affection_multiplier = 1.0 + (bond_affection / 100.0)
+    return stats
+
+func _get_element_name(elem: DragonSpeciesData.ElementalType) -> String:
+    match elem:
+        DragonSpeciesData.ElementalType.VENTO: return "Vento"
+        DragonSpeciesData.ElementalType.FOGO: return "Fogo"
+        DragonSpeciesData.ElementalType.TERRA: return "Terra"
+        DragonSpeciesData.ElementalType.AGUA: return "Água / Gelo"
+    return "Neutro"
 ```
 
-### 3. Sistema de Geração (`DragonFactory` / `DragonTaxonomyRegistry`)
-- Mapeamento determinístico:
-  - **Rota do Parkour (0..3)** $\rightarrow$ `ElementalType` (Vento, Fogo, Terra, Água).
-  - **Tipo MBTI do Dragão (16 tipos)** $\rightarrow$ Agrupado em `TemperamentClass` (`NT`, `NF`, `SJ`, `SP`).
-  - **Identidade & Condição no Ritual** $\rightarrow$ Determina a `MorphologyVariation`:
-    - Padrão do Prólogo: Assertivo (`-A`) tende a variações Aladas/Rúnicas, Turbulento (`-T`) tende a variações Blindadas/Místicas, com Variação Ancestral desbloqueada por critérios especiais (ex: desempenho perfeito na rota ou sinergia de afinidade rara).
-- Construtor de lookup determinístico `DragonTaxonomyRegistry.get_species(type, temperament, variation)`.
+### 3. Gerador Batch de Recursos (`dragon_species_generator.gd`)
+Para evitar a criação manual dos 80 arquivos `.tres`:
+- Script `@tool` executável via editor ou CLI (`godot --headless -s ...`).
+- Aplica as fórmulas balanceadas de status para cada combinação `(tipo, classe, variacao)` e grava em `res://data/dragons/{elemento}/{id}.tres`.
+- Permite aos game designers abrir qualquer um dos 80 arquivos no Inspector para ajustes manuais finos sem perda de estrutura.
 
-### 4. Integração com o Prólogo Existente
-- Atualizar `res://src/prologue/ritual_controller.gd`:
-  - Substituir o array `RACE_DATA` estático pela consulta ao `DragonTaxonomyRegistry`.
-  - Instanciar e preencher o `DragonInstanceData` ao concluir o ritual.
-  - Manter retrocompatibilidade com `DragonData` e o teste automatizado em `res://tests/ritual_smoke_test.gd`.
+### 4. Camada de Compatibilidade (Retrocompatibilidade)
+- `DragonData` é atualizado para conter uma referência opcional `var species_data: DragonSpeciesData` e um método de conversão `to_instance_data() -> DragonInstanceData`.
+- O método `create_dragon_stats()` em `DragonData` continua operacional para que todas as cenas existentes (`combat_arena.gd`, `main.gd`, `hud_controller.gd`) continuem funcionando sem refatorações destrutivas imediatas.
 
 ---
 
-## 📋 Lista de Tarefas / Checklist de Implementação
+## 📋 Checklist de Implementação Passo a Passo
 
-- [ ] **Módulo de Definição (Resources)**
-  - [ ] Criar `res://src/resources/dragon_species_data.gd` com Enums e exports tipados.
-  - [ ] Criar `res://src/resources/dragon_instance_data.gd` com métodos de instanciação e cálculo de status.
-- [ ] **Registro e Catálogo (Data Registry)**
-  - [ ] Criar `res://src/systems/dragon_taxonomy_registry.gd` (cache e indexação em dicionário ou autoload).
-  - [ ] Criar script utilitário (`tool`) ou gerador batch para gerar os 80 arquivos `.tres` de espécies organizados em `res://data/dragons/{vento,fogo,terra,agua}/`.
-- [ ] **Fábrica e Resolução Determinística**
-  - [ ] Implementar `res://src/systems/dragon_factory.gd` contendo a regra de cruzamento:
-    - `resolve_species(route_id: int, mbti_code: String, identity: String, score_bonus: float) -> DragonSpeciesData`.
-- [ ] **Integração no Fluxo de Jogo**
-  - [ ] Integrar no `res://src/prologue/ritual_controller.gd` no método `_bond_with_dragon()`.
-  - [ ] Conectar os dados gerados à UI de sumário final (`_show_summary_screen()`).
-- [ ] **Testes Automatizados e Validação**
-  - [ ] Atualizar ou estender `res://tests/ritual_smoke_test.gd` para cobrir os 16 arquétipos base e as 5 variações (80 combinações sem erros de lookup).
-  - [ ] Validar serialização/salvamento com `ResourceSaver.save()`.
+- [ ] **Fase 1: Resources & Estrutura Base**
+  - [ ] Implementar `res://src/resources/dragon_species_data.gd`.
+  - [ ] Implementar `res://src/resources/dragon_instance_data.gd`.
+  - [ ] Atualizar `res://src/resources/dragon_data.gd` com campos de transição.
+- [ ] **Fase 2: Catálogo e Gerador dos 80 Recursos**
+  - [ ] Criar o script utilitário `res://src/systems/tools/dragon_species_generator.gd`.
+  - [ ] Executar o gerador para popular `res://data/dragons/` com os 80 arquivos `.tres`.
+  - [ ] Implementar `res://src/systems/dragon_taxonomy_registry.gd` (cache indexado `dict[tipo][classe][variacao]`).
+- [ ] **Fase 3: Motor de Resolução Determinística**
+  - [ ] Implementar `res://src/systems/dragon_factory.gd`:
+    - Resolução de `ElementalType` a partir de `route_index`.
+    - Resolução de `TemperamentClass` a partir do `mbti_code` (extração dos eixos centrais `NT`, `NF`, `SJ`, `SP`).
+    - Resolução de `MorphologyVariation` com base no tempo, dano recebido e sufixo de identidade (`-A` / `-T`).
+- [ ] **Fase 4: Integração com o Ritual do Prólogo**
+  - [ ] Atualizar `res://src/prologue/ritual_controller.gd` para utilizar o `DragonFactory`.
+  - [ ] Atualizar o sumário pós-ritual (`_show_summary_screen()`) exibindo a nomenclatura completa, classe e variação.
+- [ ] **Fase 5: Testes e Validação de Regressão**
+  - [ ] Expandir `res://tests/ritual_smoke_test.gd` com suíte de teste taxonômico:
+    - Validar que todos os 80 `.tres` existem e carregam sem erros.
+    - Testar determinismo: mesmos parâmetros de entrada geram a mesma espécie.
+    - Testar integridade dos status calculados em `DragonStats`.
 
 ---
 
 ## 🎯 Critérios de Aceite
-1. Todas as 80 combinações da matriz 4 × 4 × 5 possuem uma entrada válida e carregável via `ResourceLoader`.
-2. A rota do parkour seleciona confiavelmente o tipo elemental correspondente.
-3. O MBTI resultante do Teste do Mago agrupa corretamente na classe correspondente (`NT`, `NF`, `SJ`, `SP`).
-4. Nenhuma referência a `RACE_DATA` estático quebrará testes existentes de inicialização.
-5. A cobertura dos testes automatizados valida que a espécie resolvida contém nomes, status e perks distintos.
+1. **Completude do Catálogo:** Todos os 80 arquivos `.tres` estão presentes na árvore `res://data/dragons/` e passam na verificação de integridade do `ResourceLoader`.
+2. **Precisão Determinística:**
+   - Rotas 0, 1, 2, 3 mapeiam estritamente para Serpe (Vento), Draco (Fogo), Wyvern (Terra) e Leviatã (Água).
+   - Qualquer combinação MBTI de 16 tipos mapeia corretamente para sua respectiva classe (`NT`, `NF`, `SJ`, `SP`).
+3. **Estabilidade de Pipeline:** Todos os testes de fumaça existentes (`tests/ritual_smoke_test.gd`) continuam passando sem regressões.
+4. **Desempenho:** A indexação no `DragonTaxonomyRegistry` é instantânea no startup, sem causar travamentos ou picos de carregamento durante a transição de fases do prólogo.
