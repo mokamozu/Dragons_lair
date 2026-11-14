@@ -26,9 +26,9 @@ Em *Dragons Lair*, cada dragão é montado modularmente a partir de 3 eixos:
 
 As 16 raças do jogo baseiam-se nas arquiteturas clássicas e exóticas ilustradas nos compêndios abaixo (quadrúpedes alados, bípedes wyverns, drakes terrestres sem asas, serpentes emplumadas, hidras multi-cabeças e dragões orientais/aquáticos):
 
-![Tipos de Dragões - Silhuetas](assets/references/types_of_dragons_chart.jpg)
-![Dragões do Mundo - Escala e Proporção](assets/references/dragons_of_the_world_scale.jpg)
-![Tipos de Dragão - Variações](assets/references/types_of_dragon_poster.jpg)
+![Tipos de Dragões - Silhuetas](assets/references/ref_07_types_of_dragons.png)
+![Dragões do Mundo - Escala e Proporção](assets/references/ref_10_dragons_of_the_world_scale.png)
+![Tipos de Dragão - Variações](assets/references/ref_11_types_of_dragon_alt.png)
 
 ---
 
@@ -73,58 +73,58 @@ As 16 raças do jogo baseiam-se nas arquiteturas clássicas e exóticas ilustrad
 ### 4.1. Ovos do Santuário (Fase 1 & 2)
 O ovo muda de casca conforme a raça invocada e o elemento da rota do parkour (escamas sobrepostas para Fogo, casca lisa/cristalina para Água, espinhos/casca rochosa para Terra, filamentos plumosos para Vento):
 
-![Referência de Ovos de Dragão](assets/references/dragon_eggs_reference.jpg)
+![Referência de Ovos de Dragão](assets/references/ref_02_dragon_eggs.png)
 
 ### 4.2. Morfologia de Cabeças (`A` a `K`)
 Cada raça utiliza um dos arquétipos cranianos abaixo como base de *rigging* facial e chifres:
 
-![Morfologia de Cabeças de Dragão](assets/references/dragon_heads_morphology.jpg)
+![Morfologia de Cabeças de Dragão](assets/references/ref_03_dragon_heads_ak.png)
 
 ### 4.3. Anatomia e Padrões de Asas
 * **Estrutura Óssea (Rigging de Voo):** *Fingered* (padrão), *Rayed* (aquático/planador), *6-Fingered* (alta sustentação), *Accordion* (acrobático) e *Handed* (apoio terrestre):
-![Anatomia Óssea das Asas](assets/references/wing_anatomy_rigging.jpg)
+![Anatomia Óssea das Asas](assets/references/ref_12_wing_anatomy.png)
 
 * **Padrões de Membrana (`A` a `K`) e Paletas Elementais:**
-![Padrões de Membrana de Asas](assets/references/wing_membrane_patterns.jpg)
-![Paletas e Silhuetas Superiores](assets/references/top_down_wing_palettes.jpg)
+![Padrões de Membrana de Asas](assets/references/ref_04_wing_patterns_ak.png)
+![Paletas e Silhuetas Superiores](assets/references/ref_05_topdown_silhouettes.png)
 
 * **Postura Terrestre de Wyverns (Apoio nas Asas):**
-![Postura Terrestre de Wyverns](assets/references/wyvern_ground_poses.jpg)
+![Postura Terrestre de Wyverns](assets/references/ref_01_wyvern_posture_study.png)
 
 ### 4.4. Caudas & Armas Naturais
 As caudas definem o ataque secundário e o equilíbrio em voo:
 * **Elementais:** *Fire Dragon* (I), *Battle Fighter* (II), *River Dragon* (III), *Mountain Beast* (IV), *Deep Sea Monster* (V), *Creature of Heaven* (VI).
 * **Bélicas:** *Club Tail*, *Scorpion Tail*, *Dagger Tail*, *Sword Tail*, *Morningstar Tail*, *Feather Tail*.
 
-![Caudas Elementais](assets/references/dragon_tails_elemental.jpg)
-![Caudas Bélicas - Codex](assets/references/dragon_tails_weapons.jpg)
+![Caudas Elementais](assets/references/ref_08_dragon_tails_color.png)
+![Caudas Bélicas - Codex](assets/references/ref_09_dragon_tails_catalogue.png)
 
 ### 4.5. Íris e Expressão Ocular (Personalidade & Traço)
 A pupila e o brilho ocular refletem o traço psicológico do dragão (pupila fendida para predadores/audaciosos, redonda para protetores/dóceis, estrelada/rúnica para linhagens místicas):
 
-![Referência de Olhos de Dragão](assets/references/dragon_eyes_reference.jpg)
+![Referência de Olhos de Dragão](assets/references/ref_06_dragon_eyes.png)
 
 ---
 
 ## 5. Estrutura de Pastas das Imagens no Repositório
 
-Para que todas as imagens acima renderizem corretamente no GitHub, salve-as na pasta `docs/assets/references/` com os seguintes nomes:
+As 12 imagens de referência estão incluídas em `docs/assets/references/`:
 
 ```text
 docs/
 ├── ONBOARDING_DRAGOES_ARTE_E_SISTEMA.md
 └── assets/
     └── references/
-        ├── types_of_dragons_chart.jpg
-        ├── dragons_of_the_world_scale.jpg
-        ├── types_of_dragon_poster.jpg
-        ├── dragon_eggs_reference.jpg
-        ├── dragon_heads_morphology.jpg
-        ├── wing_anatomy_rigging.jpg
-        ├── wing_membrane_patterns.jpg
-        ├── top_down_wing_palettes.jpg
-        ├── wyvern_ground_poses.jpg
-        ├── dragon_tails_elemental.jpg
-        ├── dragon_tails_weapons.jpg
-        └── dragon_eyes_reference.jpg
+        ├── ref_01_wyvern_posture_study.png
+        ├── ref_02_dragon_eggs.png
+        ├── ref_03_dragon_heads_ak.png
+        ├── ref_04_wing_patterns_ak.png
+        ├── ref_05_topdown_silhouettes.png
+        ├── ref_06_dragon_eyes.png
+        ├── ref_07_types_of_dragons.png
+        ├── ref_08_dragon_tails_color.png
+        ├── ref_09_dragon_tails_catalogue.png
+        ├── ref_10_dragons_of_the_world_scale.png
+        ├── ref_11_types_of_dragon_alt.png
+        └── ref_12_wing_anatomy.png
 ```
