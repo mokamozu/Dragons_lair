@@ -5,28 +5,24 @@ signal course_completed(route_index: int, timed_out: bool)
 const ROUTES: Array[Dictionary] = [
 	{
 		"name": "Caminho das Correntes",
-		"species": "Serpe das Nuvens",
 		"element": "Vento",
 		"color": Color(0.35, 0.76, 0.91),
 		"description": "+40 Estamina · +15% Velocidade Aérea · planar eficiente",
 	},
 	{
 		"name": "Caminho das Brasas",
-		"species": "Draco Vulcânico",
 		"element": "Fogo",
 		"color": Color(0.94, 0.36, 0.16),
 		"description": "+15 Poder Elemental · +10% Dano Crítico · resistência ao calor",
 	},
 	{
 		"name": "Caminho das Raízes",
-		"species": "Wyvern da Montanha",
 		"element": "Terra",
 		"color": Color(0.53, 0.66, 0.3),
 		"description": "+50 Vitalidade · +40 Carga",
 	},
 	{
 		"name": "Caminho das Marés",
-		"species": "Leviatã das Marés",
 		"element": "Água / Gelo",
 		"color": Color(0.37, 0.53, 0.91),
 		"description": "+25% Regeneração · +20% Agilidade em Curvas · nado rápido",
@@ -39,6 +35,7 @@ const FINISH_Z: float = -28.0
 var time_remaining: float = TIME_LIMIT
 var selected_route: int = -1
 var timed_out: bool = false
+var dragon_species: DragonSpeciesData
 var _course_active: bool = true
 var _player: CharacterBody3D
 var _camera: Camera3D
@@ -277,18 +274,23 @@ func _build_hud() -> void:
 func _finish_course(expired: bool) -> void:
 	if not _course_active:
 		return
+	if dragon_species == null:
+		push_error("A trilha precisa receber a espécie definida pelo Oráculo antes de terminar.")
+		return
 	_course_active = false
 	timed_out = expired
 	selected_route = _get_route_index(_player.global_position.x)
 	var route: Dictionary = ROUTES[selected_route]
 	if expired:
-		_result_text.text = "A chama se apagou antes da chegada. O ovo eclode no setor mais próximo: %s (%s). O filhote começa o primeiro dia exausto." % [
-			route["species"],
+		_result_text.text = "A chama se apagou antes da chegada. O ovo eclode como %s (%s), no elemento %s. O filhote começa o primeiro dia exausto." % [
+			dragon_species.species_name,
+			dragon_species.mbti_code,
 			route["element"],
 		]
 	else:
-		_result_text.text = "Você concluiu a trilha pela rota escolhida. O ovo desperta como %s, afinado ao elemento %s.\n\n%s" % [
-			route["species"],
+		_result_text.text = "Você concluiu a trilha pela rota escolhida. O ovo desperta como %s (%s), afinado ao elemento %s.\n\n%s" % [
+			dragon_species.species_name,
+			dragon_species.mbti_code,
 			route["element"],
 			route["description"],
 		]

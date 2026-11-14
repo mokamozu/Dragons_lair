@@ -19,6 +19,8 @@ var inventory: Dictionary = {}
 
 func _ready() -> void:
 	interaction_ray.add_exception(self)
+	visual.visible = false
+	camera_pivot.call("set_first_person", true)
 	_build_placeholder_character()
 
 
@@ -46,9 +48,9 @@ func _physics_process(delta: float) -> void:
 		velocity.y = jump_velocity
 
 	if move_direction.length_squared() > 0.01:
-		rotation.y = lerp_angle(
-			rotation.y,
-			atan2(-move_direction.x, -move_direction.z),
+		visual.rotation.y = lerp_angle(
+			visual.rotation.y,
+			atan2(-move_direction.x, -move_direction.z) - global_rotation.y,
 			minf(1.0, delta * 12.0)
 		)
 
@@ -79,19 +81,27 @@ func attach_to_dragon(dragon: Node3D, seat: Node3D) -> void:
 	companion = dragon
 	reparent(dragon, true)
 	global_transform = seat.global_transform
+	visual.visible = true
+	camera_pivot.call("set_first_person", false)
 	collision_shape.set_deferred("disabled", true)
 
 
 func detach_from_dragon(world_position: Vector3) -> void:
 	if not is_mounted:
 		return
-	var scene_root: Node = get_tree().current_scene
+	var scene_root: Node = companion.get_parent() if companion != null else get_tree().current_scene
+	if scene_root == null:
+		push_error("Não foi possível encontrar a cena para desmontar o jogador.")
+		return
 	reparent(scene_root, true)
 	global_position = world_position
 	rotation.y = 0.0
+	visual.rotation.y = 0.0
 	velocity = Vector3.ZERO
 	collision_shape.set_deferred("disabled", false)
 	is_mounted = false
+	visual.visible = false
+	camera_pivot.call("set_first_person", true)
 
 
 func _drive_companion() -> void:
@@ -106,7 +116,11 @@ func _drive_companion() -> void:
 		direction,
 		Input.is_action_pressed("jump"),
 		Input.is_action_pressed("fly_down"),
-		Input.is_action_pressed("run")
+		Input.is_action_pressed("run"),
+		1.0 if Input.is_action_pressed("move_forward") else 0.0,
+		Input.is_action_just_pressed("jump"),
+		Input.is_action_pressed("move_back"),
+		camera_pivot.rotation.x
 	)
 
 

@@ -8,7 +8,9 @@ const DRAGON_STATS_SCRIPT: Script = preload("res://src/systems/dragon_stats.gd")
 @export var dragon_name: String = "Brasa"
 @export var player_mbti: String = "ENFP-A"
 @export var dragon_mbti: String = "ISFJ-T"
-@export var species: String = "Draco Vulcânico"
+@export var species: String = "Dragão Ártico"
+@export var species_id: String = ""
+@export var species_profile: DragonSpeciesData
 @export var element: String = "Fogo"
 @export var behavioral_trait: String = "Protetor / Leal"
 @export var weapon: String = "Espada e Escudo"
@@ -68,11 +70,23 @@ func save_to_disk() -> Error:
 	return ResourceSaver.save(self, SAVE_PATH)
 
 
+func resolve_species_profile() -> DragonSpeciesData:
+	var profile: DragonSpeciesData = DragonSpeciesCatalog.get_profile(dragon_mbti)
+	if profile == null:
+		return null
+	species_profile = profile
+	species_id = profile.species_id
+	species = profile.species_name
+	return profile
+
+
 static func load_saved() -> DragonData:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return null
 	var loaded: Resource = ResourceLoader.load(SAVE_PATH, "DragonData")
 	if loaded is DragonData:
+		if loaded.resolve_species_profile() == null:
+			return null
 		return loaded
 	push_error("O arquivo salvo do vínculo existe, mas não contém DragonData válido.")
 	return null

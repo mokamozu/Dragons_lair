@@ -2,23 +2,22 @@
 
 **Repositório:** `mokamozu/Dragons_lair`  
 **Engine:** Godot 4.3+  
-**Objetivo:** Este guia estabelece a identidade visual, anatômica e estrutural das **80 espécies de dragões** do jogo (16 Raças MBTI × 4 Elementos × 5 Variações), servindo como referência obrigatória para modelagem 3D, shaders e scripts no Godot 4.
+**Objetivo:** Este guia estabelece a identidade visual, anatômica e estrutural das **16 espécies-base de dragões**, uma para cada MBTI, servindo como referência para os dados e para futuras etapas de arte 3D no Godot 4.
 
 ---
 
-## 1. Arquitetura Taxonômica (Matriz 16 × 4 × 5)
+## 1. Arquitetura Taxonômica (16 Espécies-base)
 
-Em *Dragons Lair*, cada dragão é montado modularmente a partir de 3 eixos:
+Em *Dragons Lair*, a espécie-base e a afinidade elemental são definidas separadamente:
 
-1. **16 Raças Base (Definidas pelo MBTI exato do Dragão — Fase 1):**
-   Cada tipo de MBTI corresponde a uma silhueta anatômica exclusiva (número de patas, presença ou formato de asas, estrutura de cabeça e cauda).
-2. **4 Afinidades Elementais (Definidas pela Rota no Parkour — Fase 2):**
+1. **16 Espécies-base (definidas pelos quatro primeiros caracteres do MBTI do Dragão — Fase 1):**
+   Cada tipo de MBTI corresponde a uma espécie e ficha morfológica próprias. O sufixo de identidade (`-A` ou `-T`) não cria outra espécie.
+2. **4 Afinidades Elementais (definidas pela rota no parkour — Fase 2):**
    * **Vento / Raio** *(Caminho das Correntes)*
    * **Fogo** *(Caminho das Brasas)*
    * **Terra** *(Caminho das Raízes)*
    * **Água / Gelo** *(Caminho das Marés)*
-3. **5 Variações por Raça (Total: 80 Espécies Catalogáveis):**
-   Subespécies definidas pela Identidade (`-A` / `-T`), afinidade secundária ou descobertas na exploração/cruzamento.
+   O elemento e os bônus da rota são dados independentes da espécie-base; portanto, não multiplicam a contagem de espécies. Variações visuais e subespécies ficam fora deste catálogo inicial.
 
 ---
 
@@ -106,7 +105,13 @@ A pupila e o brilho ocular refletem o traço psicológico do dragão (pupila fen
 
 ---
 
-## 5. Estrutura de Pastas das Imagens no Repositório
+## 5. Escopo de Dados Implementado
+
+O protótipo mantém um catálogo de dados com exatamente 16 espécies-base. O Oráculo calcula o MBTI complementar do dragão e esse código escolhe sua espécie; o parkour seleciona separadamente o elemento e os bônus da rota. A ficha persistente guarda o ID MBTI da espécie, anatomia, perfil de cabeça, asas, cauda e especialidade.
+
+Esta etapa implementa apenas dados (`DragonSpeciesData` e `DragonSpeciesCatalog`). As imagens abaixo são referências conceituais: não geram modelos 3D, rigs, shaders ou animações automaticamente.
+
+## 6. Estrutura de Pastas das Imagens no Repositório
 
 As 12 imagens de referência estão incluídas em `docs/assets/references/`:
 

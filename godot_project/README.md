@@ -6,7 +6,7 @@ Projeto inicial jogável para Godot 4.3 ou superior. A renderização usa **Comp
 
 1. Abra `godot_project/project.godot` no Godot.
 2. Aguarde a importação inicial e pressione **F5** para iniciar o Ritual do Primeiro Vínculo.
-3. Conclua as três provas, escolha os nomes e salve o pergaminho para iniciar a fazenda. Na fazenda, clique na janela para capturar o mouse; pressione **Esc** para liberá-lo ou recapturá-lo.
+3. Conclua as três provas, escolha os nomes e salve o pergaminho para iniciar a fazenda. Na fazenda, a exploração a pé usa câmera em primeira pessoa e captura o mouse ao iniciar; pressione **Esc** para liberá-lo ou recapturá-lo. Ao montar, a câmera alterna para acompanhamento em terceira pessoa.
 
 ## Controles
 
@@ -14,12 +14,13 @@ Projeto inicial jogável para Godot 4.3 ou superior. A renderização usa **Comp
 |---|---|
 | W, A, S, D | Mover o personagem ou conduzir o dragão |
 | Shift | Correr a pé ou impulsionar durante o voo |
-| Espaço | Pular a pé; decolar/subir montado |
-| C | Descer durante o voo |
-| Mouse | Girar a câmera |
+| Espaço | Pular a pé; decolar e executar impulso de batida no ar |
+| C | Inclinar para baixo durante o voo |
+| Mouse | Girar a câmera e controlar a inclinação do voo montado |
 | E | Interagir com recursos, porta e canteiros |
 | F | Montar ou desmontar (é necessário pousar para desmontar) |
 | G | Alternar entre seguir e ficar parado |
+| S | Freio aerodinâmico enquanto voa |
 | J ou clique esquerdo | Atacar durante a Prova de Aço e Magia |
 | Esc | Liberar/recapturar o mouse |
 
@@ -27,13 +28,14 @@ Projeto inicial jogável para Godot 4.3 ou superior. A renderização usa **Comp
 
 - Prólogo jogável em três fases: teste de personalidade, circuito de parkour e combate.
 - Ritual Padrão (30 perguntas) e Ritual Completo (60 afirmações Likert); afinidade complementar MBTI em cinco eixos.
-- Quatro rotas de sobrevivência determinam raça, elemento e bônus; limite de 3 minutos e estado Exausto ao esgotar o tempo.
+- Catálogo de 16 espécies baseadas no MBTI complementar do dragão; a rota determina o elemento e os bônus, com limite de 3 minutos e estado Exausto ao esgotar o tempo.
 - Escolha permanente entre oito armas e batalha sem Game Over; vitória define Audacioso ou Protetor, derrota define Medroso.
 - Pergaminho de Vínculo com nome e dados salvos em `user://dragon_data.tres`, carregados pelo protótipo da fazenda.
 - Testes automatizados do questionário, recursos, fases e geração dos dados podem ser executados com `godot --path godot_project --script res://tests/ritual_smoke_test.gd`.
 
 - Personagem humanoide provisório, caminhada, corrida, gravidade, colisão e pulo.
-- Câmera de terceira pessoa com SpringArm3D, rotação por mouse e colisão.
+- Câmera em primeira pessoa a pé, com movimento relativo ao olhar; na montaria, câmera de acompanhamento com SpringArm3D e colisão.
+- Voo montado com momentum, mergulho e carga cinética, zoom climb, estol, impulso de batida, freio aerodinâmico, bancagem e feedback dinâmico de câmera.
 - Dragão provisório com silhueta composta, comportamento de seguir/parar e voo de acompanhamento.
 - Montaria terrestre e aérea, decolagem, subida, descida, planar, pouso e regeneração/consumo de estamina.
 - Recurso `DragonStats` para os atributos iniciais do dragão.

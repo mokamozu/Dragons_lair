@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://src/dragon/dragon_controller.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/dragons/starter_dragon.tres" id="2"]
+[ext_resource type="Script" path="res://src/dragon/flight/flight_feedback.gd" id="3"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_dragon"]
 radius = 0.65
@@ -16,6 +17,9 @@ position = Vector3(0, 1.1, 0)
 shape = SubResource("CapsuleShape_dragon")
 
 [node name="Visual" type="Node3D" parent="."]
+
+[node name="FlightFeedback" type="Node3D" parent="Visual"]
+script = ExtResource("3")
 
 [node name="Seat" type="Marker3D" parent="."]
 position = Vector3(0, 1.55, 0.15)

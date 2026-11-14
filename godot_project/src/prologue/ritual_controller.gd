@@ -6,7 +6,6 @@ const ARENA_SCENE: PackedScene = preload("res://scenes/prologue/combat_arena.tsc
 
 const RACE_DATA: Array[Dictionary] = [
 	{
-		"species": "Serpe das Nuvens",
 		"element": "Vento",
 		"hp": 0.0,
 		"stamina": 40.0,
@@ -21,7 +20,6 @@ const RACE_DATA: Array[Dictionary] = [
 		"swim_speed": 1.0,
 	},
 	{
-		"species": "Draco Vulcânico",
 		"element": "Fogo",
 		"hp": 0.0,
 		"stamina": 0.0,
@@ -36,7 +34,6 @@ const RACE_DATA: Array[Dictionary] = [
 		"swim_speed": 1.0,
 	},
 	{
-		"species": "Wyvern da Montanha",
 		"element": "Terra",
 		"hp": 50.0,
 		"stamina": 0.0,
@@ -51,7 +48,6 @@ const RACE_DATA: Array[Dictionary] = [
 		"swim_speed": 1.0,
 	},
 	{
-		"species": "Leviatã das Marés",
 		"element": "Água / Gelo",
 		"hp": 0.0,
 		"stamina": 0.0,
@@ -76,6 +72,7 @@ var battle_result: String = ""
 var behavioral_trait: String = ""
 var selected_weapon: String = ""
 var dragon_data: DragonData
+var dragon_species_profile: DragonSpeciesData
 var _active_phase: Node
 var _summary_layer: CanvasLayer
 var _player_name: LineEdit
@@ -124,8 +121,13 @@ func _on_personality_completed(
 	player_mbti = player_code
 	dragon_mbti = dragon_code
 	personality_scores = scores
+	dragon_species_profile = DragonSpeciesCatalog.get_profile(dragon_code)
+	if dragon_species_profile == null:
+		push_error("Não foi possível determinar a espécie correspondente ao MBTI do dragão.")
+		return
 	_remove_active_phase()
 	_active_phase = COURSE_SCENE.instantiate()
+	_active_phase.set("dragon_species", dragon_species_profile)
 	add_child(_active_phase)
 	_active_phase.course_completed.connect(_on_course_completed)
 
@@ -163,12 +165,14 @@ func _build_binding_scroll() -> void:
 	dragon_data = DragonData.new()
 	dragon_data.player_mbti = player_mbti
 	dragon_data.dragon_mbti = dragon_mbti
+	dragon_data.species_profile = dragon_species_profile
 	dragon_data.personality_scores = personality_scores
 	dragon_data.behavioral_trait = behavioral_trait
 	dragon_data.weapon = selected_weapon
 	dragon_data.battle_result = battle_result
 	dragon_data.exhausted_first_day = timed_out
-	_apply_race_data(dragon_data, RACE_DATA[selected_route])
+	dragon_data.resolve_species_profile()
+	_apply_route_data(dragon_data, RACE_DATA[selected_route])
 	_apply_trait_data(dragon_data)
 	_apply_identity_data(dragon_data)
 
@@ -252,6 +256,10 @@ func _save_binding_scroll() -> void:
 	if player_name.is_empty() or dragon_name.is_empty():
 		_save_status.text = "Informe os nomes do cavaleiro e do dragão."
 		return
+	if dragon_data.resolve_species_profile() == null:
+		_save_status.text = "Não foi possível resolver a espécie do dragão."
+		push_error("O pergaminho não pode ser salvo sem uma espécie válida.")
+		return
 	dragon_data.player_name = player_name
 	dragon_data.dragon_name = dragon_name
 	var save_error: Error = dragon_data.save_to_disk()
@@ -279,7 +287,8 @@ func _refresh_summary() -> void:
 	_summary_text.text = (
 		"IDENTIDADE  %s  ·  Dragão: %s\n"
 		+ "MBTI  Cavaleiro: %s  ·  Dragão complementar: %s\n"
-		+ "BIOLOGIA  %s — %s\n"
+		+ "ESPÉCIE  %s (%s) — Elemento: %s\n"
+		+ "MORFOLOGIA  %s · Cabeça %s · Asas %s · Cauda %s\n"
 		+ "TEMPERAMENTO  %s\n"
 		+ "ARMA INICIAL  %s\n"
 		+ "ATRIBUTOS  HP %.0f  ·  Estamina %.0f  ·  Poder Elemental %.0f  ·  Força %.0f  ·  Carga %.0f\n"
@@ -290,7 +299,12 @@ func _refresh_summary() -> void:
 		player_mbti,
 		dragon_mbti,
 		dragon_data.species,
+		dragon_species_profile.mbti_code,
 		dragon_data.element,
+		dragon_species_profile.anatomy,
+		dragon_species_profile.head_profile,
+		dragon_species_profile.wing_profile,
+		dragon_species_profile.tail_profile,
 		dragon_data.behavioral_trait,
 		dragon_data.weapon,
 		stats.max_hp,
@@ -303,20 +317,19 @@ func _refresh_summary() -> void:
 	]
 
 
-func _apply_race_data(data: DragonData, race: Dictionary) -> void:
-	data.species = str(race["species"])
-	data.element = str(race["element"])
-	data.hp_bonus = float(race["hp"])
-	data.stamina_bonus = float(race["stamina"])
-	data.elemental_power_bonus = float(race["elemental"])
-	data.carry_bonus = float(race["carry"])
-	data.air_speed_multiplier = float(race["air_speed"])
-	data.critical_bonus = float(race["critical"])
-	data.stamina_regen_multiplier = float(race["regen"])
-	data.turn_agility_multiplier = float(race["agility"])
-	data.flight_stamina_cost_multiplier = float(race["flight_cost"])
-	data.heat_resistance = bool(race["heat_resistance"])
-	data.swim_speed_multiplier = float(race["swim_speed"])
+func _apply_route_data(data: DragonData, route: Dictionary) -> void:
+	data.element = str(route["element"])
+	data.hp_bonus = float(route["hp"])
+	data.stamina_bonus = float(route["stamina"])
+	data.elemental_power_bonus = float(route["elemental"])
+	data.carry_bonus = float(route["carry"])
+	data.air_speed_multiplier = float(route["air_speed"])
+	data.critical_bonus = float(route["critical"])
+	data.stamina_regen_multiplier = float(route["regen"])
+	data.turn_agility_multiplier = float(route["agility"])
+	data.flight_stamina_cost_multiplier = float(route["flight_cost"])
+	data.heat_resistance = bool(route["heat_resistance"])
+	data.swim_speed_multiplier = float(route["swim_speed"])
 
 
 func _apply_trait_data(data: DragonData) -> void:

@@ -10,25 +10,40 @@ enum CompanionState {
 }
 
 @export var stats: DragonStats
+@export var species_profile: DragonSpeciesData
 @export_range(0.5, 10.0, 0.1) var follow_distance: float = 3.0
 @export_range(1.0, 30.0, 0.5) var flight_speed: float = 11.0
 @export_range(1.0, 30.0, 0.5) var boost_speed: float = 16.0
+@export_range(4.0, 16.0, 0.5) var cruise_speed: float = 14.0
 
 @onready var visual: Node3D = $Visual
 @onready var seat: Marker3D = $Seat
+@onready var flight_feedback: Node3D = $Visual/FlightFeedback
 
 var state: CompanionState = CompanionState.FOLLOWING
 var follow_target: Node3D
 var rider: Node3D
 var current_hp: float = 120.0
 var current_stamina: float = 100.0
+var kinetic_charge: float = 0.0
+var is_stalled: bool = false
 var _rider_direction: Vector3 = Vector3.ZERO
 var _rider_ascending: bool = false
 var _rider_descending: bool = false
 var _rider_boosting: bool = false
+var _rider_throttle: float = 0.0
+var _rider_flap_requested: bool = false
+var _rider_air_braking: bool = false
+var _rider_pitch: float = 0.0
 var _wing_phase: float = 0.0
 var _left_wing: Node3D
 var _right_wing: Node3D
+var _flight_physics: DragonFlightPhysics = DragonFlightPhysics.new()
+var _flight_speed: float = 0.0
+var _flight_terminal_speed: float = 38.0
+var _flight_active: bool = false
+var _visual_target_pitch: float = 0.0
+var _visual_target_roll: float = 0.0
 
 
 func _ready() -> void:
@@ -46,7 +61,24 @@ func _process(delta: float) -> void:
 		_wing_phase += delta * (11.0 if state == CompanionState.MOUNTED_FLYING or state == CompanionState.FLYING else 4.0)
 		_left_wing.rotation.z = sin(_wing_phase) * 0.32
 		_right_wing.rotation.z = -sin(_wing_phase) * 0.32
-	visual.rotation.z = lerpf(visual.rotation.z, -_rider_direction.x * 0.08, minf(delta * 4.0, 1.0))
+	visual.rotation.x = lerpf(visual.rotation.x, _visual_target_pitch, minf(delta * 4.0, 1.0))
+	visual.rotation.z = lerpf(visual.rotation.z, _visual_target_roll, minf(delta * 4.0, 1.0))
+	flight_feedback.call(
+		"set_flight_feedback",
+		_flight_speed / maxf(_flight_terminal_speed, 1.0),
+		_flight_active,
+		_rider_air_braking
+	)
+	if rider != null:
+		var camera_pivot: Node3D = rider.get_node_or_null("CameraPivot")
+		if camera_pivot != null:
+			camera_pivot.call(
+				"set_flight_feedback",
+				_flight_speed,
+				_flight_terminal_speed,
+				_flight_active,
+				_rider_air_braking
+			)
 
 
 func _physics_process(delta: float) -> void:
@@ -102,12 +134,46 @@ func set_rider_input(
 	direction: Vector3,
 	ascending: bool,
 	descending: bool,
-	boosting: bool
+	boosting: bool,
+	throttle: float = 0.0,
+	flap_requested: bool = false,
+	air_braking: bool = false,
+	pitch: float = 0.0
 ) -> void:
 	_rider_direction = direction
+	if air_braking and state == CompanionState.MOUNTED_FLYING:
+		var forward: Vector3 = -global_basis.z
+		var right: Vector3 = global_basis.x
+		forward.y = 0.0
+		right.y = 0.0
+		forward = forward.normalized()
+		right = right.normalized()
+		var forward_input: float = maxf(direction.dot(forward), 0.0)
+		var side_input: float = direction.dot(right)
+		_rider_direction = (
+			forward * forward_input + right * side_input
+		).normalized()
 	_rider_ascending = ascending
 	_rider_descending = descending
 	_rider_boosting = boosting
+	_rider_throttle = clampf(throttle, 0.0, 1.0)
+	_rider_flap_requested = flap_requested
+	_rider_air_braking = air_braking
+	_rider_pitch = pitch
+
+
+func get_flight_status_label() -> String:
+	if state != CompanionState.MOUNTED_FLYING:
+		return ""
+	var status: String = "Voo: %d m/s · Carga: %d" % [
+		roundi(_flight_speed),
+		roundi(kinetic_charge),
+	]
+	if is_stalled:
+		status += " · ESTOL"
+	elif _rider_air_braking:
+		status += " · FREIO"
+	return status
 
 
 func get_state_label() -> String:
@@ -185,52 +251,116 @@ func _update_companion_flight(delta: float) -> void:
 
 func _update_mounted_movement(delta: float) -> void:
 	var is_flying: bool = state == CompanionState.MOUNTED_FLYING
-	if not is_flying and _rider_ascending and current_stamina > 0.0:
-		state = CompanionState.MOUNTED_FLYING
-		is_flying = true
-
 	var horizontal_direction: Vector3 = _rider_direction
 	horizontal_direction.y = 0.0
 	if horizontal_direction.length_squared() > 1.0:
 		horizontal_direction = horizontal_direction.normalized()
-	var speed: float = stats.movement_speed if not is_flying else flight_speed
-	if _rider_boosting and current_stamina > 0.0:
-		speed = boost_speed
-		current_stamina = maxf(
-			0.0,
-			current_stamina - 18.0 * stats.flight_stamina_cost_multiplier * delta
-		)
-	elif is_flying and _rider_ascending and current_stamina > 0.0:
-		current_stamina = maxf(
-			0.0,
-			current_stamina - 12.0 * stats.flight_stamina_cost_multiplier * delta
-		)
-	else:
-		current_stamina = minf(
-			stats.max_stamina,
-			current_stamina + 8.0 * stats.stamina_regen_multiplier * delta
-		)
-
-	velocity.x = move_toward(velocity.x, horizontal_direction.x * speed, 8.0 * delta)
-	velocity.z = move_toward(velocity.z, horizontal_direction.z * speed, 8.0 * delta)
-	if horizontal_direction.length_squared() > 0.01:
-		_face_direction(horizontal_direction, delta)
+	if not is_flying:
+		var ground_speed: float = stats.movement_speed
+		velocity.x = move_toward(velocity.x, horizontal_direction.x * ground_speed, 8.0 * delta)
+		velocity.z = move_toward(velocity.z, horizontal_direction.z * ground_speed, 8.0 * delta)
+		if horizontal_direction.length_squared() > 0.01:
+			_face_direction(horizontal_direction, delta)
+		if _rider_ascending and current_stamina > 0.0:
+			_begin_mounted_flight(horizontal_direction)
+			is_flying = true
+		else:
+			current_stamina = minf(
+				stats.max_stamina,
+				current_stamina + 8.0 * stats.stamina_regen_multiplier * delta
+			)
+			_apply_ground_gravity(delta)
 
 	if is_flying:
-		if _rider_ascending and current_stamina > 0.0:
-			velocity.y = move_toward(velocity.y, 4.0, 8.0 * delta)
-		elif _rider_descending:
-			velocity.y = move_toward(velocity.y, -4.5, 8.0 * delta)
-		else:
-			velocity.y = move_toward(velocity.y, -0.7, 1.5 * delta)
-	else:
-		_apply_ground_gravity(delta)
+		var heading: Vector3 = -global_basis.z
+		if horizontal_direction.length_squared() > 0.01:
+			heading = horizontal_direction.normalized()
+		var flight_result: Dictionary = _flight_physics.update_velocity(
+			velocity,
+			heading,
+			_rider_pitch - (0.45 if _rider_descending else 0.0),
+			_rider_throttle,
+			_rider_flap_requested,
+			_rider_boosting,
+			_rider_air_braking,
+			stats.element == "Água/Gelo" and _is_near_ground(),
+			delta,
+			stats,
+			stats.element,
+			cruise_speed * stats.flight_speed_multiplier,
+			current_stamina
+		)
+		velocity = flight_result["velocity"]
+		_flight_speed = float(flight_result["speed"])
+		_flight_terminal_speed = float(flight_result["terminal_speed"])
+		kinetic_charge = float(flight_result["kinetic_charge"])
+		is_stalled = bool(flight_result["stalled"])
+		current_stamina = clampf(
+			current_stamina
+				- float(flight_result["stamina_cost"])
+				+ float(flight_result["stamina_regen"]),
+			0.0,
+			stats.max_stamina
+		)
+		_flight_active = true
+		_update_flight_attitude(delta)
 
 	move_and_slide()
 	if is_on_floor():
 		velocity.y = 0.0
 		if state == CompanionState.MOUNTED_FLYING:
 			state = CompanionState.MOUNTED
+			_flight_active = false
+			_flight_speed = velocity.length()
+			_flight_physics.reset()
+			kinetic_charge = 0.0
+			is_stalled = false
+			_visual_target_pitch = 0.0
+			_visual_target_roll = 0.0
+
+
+func _begin_mounted_flight(heading: Vector3) -> void:
+	state = CompanionState.MOUNTED_FLYING
+	_flight_physics.reset()
+	kinetic_charge = 0.0
+	is_stalled = false
+	var launch_heading: Vector3 = heading.normalized()
+	if launch_heading.length_squared() < 0.01:
+		launch_heading = -global_basis.z
+	var launch_speed: float = maxf(
+		Vector2(velocity.x, velocity.z).length(),
+		cruise_speed * stats.flight_speed_multiplier
+	)
+	velocity.x = launch_heading.x * launch_speed
+	velocity.z = launch_heading.z * launch_speed
+	velocity.y = maxf(velocity.y, 2.5)
+
+
+func _update_flight_attitude(delta: float) -> void:
+	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
+	var travel_pitch: float = atan2(velocity.y, maxf(horizontal_speed, 0.1))
+	_visual_target_pitch = clampf(travel_pitch, -0.65, 0.65)
+	var heading: Vector3 = -global_basis.z
+	var velocity_heading: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
+	if velocity_heading.length_squared() < 0.01:
+		_visual_target_roll = 0.0
+		return
+	velocity_heading = velocity_heading.normalized()
+	var heading_angle: float = atan2(-heading.x, -heading.z)
+	var travel_angle: float = atan2(-velocity_heading.x, -velocity_heading.z)
+	var turn_angle: float = wrapf(travel_angle - heading_angle, -PI, PI)
+	var speed_ratio: float = clampf(_flight_speed / maxf(_flight_terminal_speed, 1.0), 0.0, 1.0)
+	_visual_target_roll = clampf(-turn_angle * (0.65 + speed_ratio * 0.6), -PI / 3.0, PI / 3.0)
+	_face_direction(velocity_heading, delta)
+
+
+func _is_near_ground() -> bool:
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		global_position,
+		global_position + Vector3.DOWN * 4.0
+	)
+	query.exclude = [get_rid()]
+	return not get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 func _apply_ground_gravity(delta: float) -> void:
@@ -251,8 +381,9 @@ func _face_direction(direction: Vector3, delta: float) -> void:
 
 
 func _build_placeholder_dragon() -> void:
-	if not visual.get_children().is_empty():
-		return
+	for child: Node in visual.get_children():
+		if child != flight_feedback:
+			return
 	var hide_color: Color = Color(0.58, 0.18, 0.11)
 	var wing_color: Color = Color(0.35, 0.08, 0.08)
 	if stats.element == "Terra":

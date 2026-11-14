@@ -14,6 +14,7 @@ func _ready() -> void:
 	var saved_data: DragonData = DragonData.load_saved()
 	if saved_data != null:
 		dragon.set("stats", saved_data.create_dragon_stats())
+		dragon.set("species_profile", saved_data.species_profile)
 	dragon.position = Vector3(3.0, 0.05, 2.0)
 	add_child(dragon)
 	if saved_data != null and saved_data.exhausted_first_day:

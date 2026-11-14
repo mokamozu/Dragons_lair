@@ -29,6 +29,10 @@ func _process(_delta: float) -> void:
 	_dragon_label.text = "%s  ·  %s" % [stats.get("dragon_name"), stats.get("element")]
 	_state_label.text = "Estado: %s" % dragon.call("get_state_label")
 	var mounted: bool = bool(player.get("is_mounted"))
+	if mounted and dragon.has_method("get_flight_status_label"):
+		var flight_status: String = str(dragon.call("get_flight_status_label"))
+		if not flight_status.is_empty():
+			_state_label.text += "\n%s" % flight_status
 	_speed_label.visible = mounted
 	if mounted:
 		var horizontal_speed: float = Vector2(dragon.get("velocity").x, dragon.get("velocity").z).length()
