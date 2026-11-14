@@ -1,0 +1,7 @@
+.godot/
+*.exe
+*.apk
+*.pck
+*.zip
+.DS_Store
+Thumbs.db
